@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: finance_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finance_local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    image: python:3.11-slim
+    command: ["sh", "-c", "sleep infinity"]
+    working_dir: /workspace/app
+    volumes:
+      - ./app:/workspace/app
+      - ./docs:/workspace/docs:ro
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/finance_local
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    image: python:3.11-slim
+    command: ["sh", "-c", "sleep infinity"]
+    working_dir: /workspace/worker
+    volumes:
+      - ./worker:/workspace/worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/finance_local
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notifier:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "8025:8025"
+
+  db-seed:
+    image: postgres:16-alpine
+    volumes:
+      - ./db/seed:/seed:ro
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: finance_local
+    entrypoint: ["sh", "-c", "psql postgresql://postgres:postgres@postgres:5432/finance_local -f /seed/seed.sql"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: postgres_data
