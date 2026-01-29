@@ -1,5 +1,6 @@
 .env
 .env.local
+.venv/
 .secrets/
 data/local/
 postgres_data*/

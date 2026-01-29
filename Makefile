@@ -1,7 +1,7 @@
 COMPOSE ?= docker compose
 SERVICES ?= app worker postgres notifier
 
-.PHONY: up down logs db-seed secrets ps restart
+.PHONY: up down logs db-seed secrets ps restart migrate
 
 up:
 	$(COMPOSE) up -d $(SERVICES)
@@ -22,3 +22,6 @@ db-seed:
 
 secrets:
 	./scripts/mock-kms.sh init
+
+migrate:
+	alembic upgrade head

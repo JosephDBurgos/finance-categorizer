@@ -11,9 +11,23 @@
 - Docker Engine ≥ 25.x and Docker Compose v2.
 - Make (optional) for scripted workflows.
 - `age` or `openssl` for local secret generation.
-- Python or Node runtime (TBD) for helper CLIs/scripts.
+- Python 3.11+ for CLI, Alembic, and helper scripts.
 
-## 3. Directory Structure (Local)
+## 3. Python Environment & Alembic
+1. Create / activate a virtual environment:
+   ```sh
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+2. Install dependencies and configure env vars:
+   ```sh
+   pip install -r requirements.txt
+   cp .env.example .env.local
+   ```
+3. Export `DATABASE_URL` (if not using `.env.local`) before running Alembic/CLI commands.
+4. Apply migrations anytime schema changes: `make migrate` (wraps `alembic upgrade head`).
+
+## 4. Directory Structure (Local)
 ```
 .
 ├── docker-compose.yml
@@ -25,7 +39,7 @@
 └── docs/
 ```
 
-## 4. Services
+## 5. Services
 | Service | Purpose | Notes |
 | --- | --- | --- |
 | `postgres` | Canonical transactional store with RLS enabled. | Initializes with migrations + sample workspaces/users. |
@@ -33,35 +47,36 @@
 | `worker` | Background jobs (rule evaluation, review notifications). | Subscribes to queue (Redis/NATS TBD). |
 | `notifier` (optional) | Captures emails/webhooks locally (e.g., MailHog). | Demonstrates review alerts. |
 
-## 5. Configuration
+## 6. Configuration
 - Base `.env.example` checked in; copy to `.env.local` with developer-specific secrets.
 - Sensitive values (workspace mock KMS IDs, demo JWT secrets) generated via `make secrets` and stored in `.secrets/` (gitignored).
 - Postgres volumes scoped per developer (`postgres_data_$USER`) to avoid collisions.
 
-## 6. Sample Data Seeding
-1. Run `docker compose up db-seed` (or `make db-seed`) to load:
+## 7. Sample Data Seeding
+1. Ensure Postgres is running (`make up`) and migrations applied (`make migrate`).
+2. Run `docker compose run --rm db-seed` (or `make db-seed`) to load:
    - Workspaces: `demo-household`, `demo-club` with admins/reviewers.
    - Accounts + ingest artifacts referencing synthetic CSVs under `data/fixtures/`.
    - Initial transactions, rules, overrides, and audit events aligning with documentation.
-2. Re-run seed command with `RESET=1` to wipe and reload fixtures.
+3. Re-run seed command with `RESET=1` to wipe and reload fixtures (logic TBD).
 
-## 7. Key Workflows to Exercise
+## 8. Key Workflows to Exercise
 - **Ingest:** `docker compose run app cli ingest data/fixtures/bank1.csv --workspace demo-household`.
 - **Categorize:** `cli categorize run --workspace demo-household --batch 2024-01` and inspect `transactions` table.
 - **Review Queue:** `cli review list --workspace demo-club`, assign items, submit overrides, verify audit log entries.
 - **Calibration:** Execute `cli categorize calibrate --workspace demo-household --batch-size 200` to simulate weight tuning.
 - **Audit Export:** `cli audit export --workspace demo-household --format json` demonstrating tamper-evident chain.
 
-## 8. Encryption Simulation
+## 9. Encryption Simulation
 - Application-layer encryption uses `libsodium` or `age` with mock KMS key IDs stored in `workspace.encryption_key_ref`.
 - Local helper `scripts/mock-kms.sh` decrypts/encrypts payloads; swap with real KMS client during managed pilot.
 
-## 9. Troubleshooting & Observability
+## 10. Troubleshooting & Observability
 - Logs streamed via `docker compose logs -f app worker`.
 - `localhost:8081` (pgAdmin or Adminer) optional for inspecting Postgres; protected behind local password.
 - Health endpoint `http://localhost:8080/healthz` verifies migrations + seed status.
 
-## 10. Portfolio Guidance
+## 11. Portfolio Guidance
 - Capture terminal recordings (asciinema) or screenshots showing ingest, review, calibration flows.
 - Highlight in README that everything runs locally with synthetic data, reinforcing privacy and cost control.
 - Note clear upgrade path: replace mock KMS + Docker Compose with managed Postgres + KMS when ready.
