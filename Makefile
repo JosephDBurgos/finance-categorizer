@@ -1,27 +1,44 @@
-COMPOSE ?= docker compose
-SERVICES ?= app worker postgres notifier
+DOCKER_COMPOSE ?= docker-compose
+APP_ENV ?= development
 
-.PHONY: up down logs db-seed secrets ps restart migrate
+export APP_ENV
+
+help:
+	@echo "Available commands:"
+	@echo "  make up         - Start all services in the background"
+	@echo "  make down       - Stop and remove all services"
+	@echo "  make logs       - Tail logs for the app and worker services"
+	@echo "  make ps         - List the status of all services"
+	@echo "  make restart    - Restart all services"
+	@echo "  make rebuild    - Rebuild and start all services"
+	@echo "  make db-seed    - Seed the database with initial data"
+	@echo "  make migrate    - Apply database migrations using Alembic"
+	@echo "  make cleanup    - Clean up all services, networks, and volumes"
 
 up:
-	$(COMPOSE) up -d $(SERVICES)
+	@$(DOCKER_COMPOSE) up -d
 
 down:
-	$(COMPOSE) down --remove-orphans
+	@$(DOCKER_COMPOSE) down --remove-orphans
 
 logs:
-	$(COMPOSE) logs -f app worker
+	@$(DOCKER_COMPOSE) logs -f app worker
 
 ps:
-	$(COMPOSE) ps
+	@$(DOCKER_COMPOSE) ps
 
 restart: down up
 
-db-seed:
-	$(COMPOSE) run --rm db-seed
+rebuild:
+	@$(DOCKER_COMPOSE) up --build -d
 
-secrets:
-	./scripts/mock-kms.sh init
+db-seed:
+	@$(DOCKER_COMPOSE) --profile tools run --rm db-seed
 
 migrate:
-	alembic upgrade head
+	@$(DOCKER_COMPOSE) run --rm app alembic upgrade head
+
+cleanup:
+	@$(DOCKER_COMPOSE) down --remove-orphans
+	@$(DOCKER_COMPOSE) rm -f
+	@docker volume rm finance-categorizer_postgres_data 2>/dev/null || true

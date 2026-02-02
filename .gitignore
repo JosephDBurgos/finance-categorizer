@@ -1,5 +1,8 @@
 .env
 .env.local
+.env.development
+.env.production
+.env.testing
 .venv/
 .secrets/
 data/local/

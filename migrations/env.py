@@ -5,7 +5,17 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from dotenv import load_dotenv
 
+# Determine the environment and load the appropriate .env file
+app_env = os.getenv("APP_ENV", "development")  # Default to "development" if APP_ENV is not set
+
+if app_env == "development" and os.path.exists(".env.local"):
+    load_dotenv(".env.local")
+elif app_env == "production" and os.path.exists(".env.production"):
+    load_dotenv(".env.production")
+elif app_env == "testing" and os.path.exists(".env.testing"):
+    load_dotenv(".env.testing")
 
 config = context.config
 if config.config_file_name is not None:
@@ -14,6 +24,7 @@ if config.config_file_name is not None:
 database_url = os.environ.get("DATABASE_URL")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
+
 
 
 def run_migrations_offline() -> None:
@@ -37,13 +48,7 @@ def run_migrations_online() -> None:
         with context.begin_transaction():
             context.run_migrations()
 
-
-def main() -> None:
-    if context.is_offline_mode():
-        run_migrations_offline()
-    else:
-        run_migrations_online()
-
-
-if __name__ == "__main__":
-    main()
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
