@@ -52,17 +52,15 @@ services:
       - "8025:8025"
 
   db-seed:
-    image: postgres:16-alpine
-    profiles: ["tools"]
-    env_file:
-      - .env
-      - .env.${APP_ENV}
-    volumes:
-      - ./db/seed:/seed:ro
-    entrypoint: ["sh", "-c", "psql ${DATABASE_URL} -f /seed/seed.sql"]
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    command: python db/seed/seed.py
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
 
 volumes:
   postgres_data:
